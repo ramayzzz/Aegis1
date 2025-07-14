@@ -1,0 +1,102 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Profile {
+  id          String    @id @default(cuid())
+  name        String
+  description String?
+  status      String    @default("active") // 'active', 'banned', 'review'
+  proxyId     String?
+  proxy       Proxy?    @relation(fields: [proxyId], references: [id])
+  createdAt   DateTime  @default(now())
+  jobs        Job[]
+  scheduledJobs ScheduledJob[]
+}
+
+model Job {
+  id           String    @id @default(cuid())
+  profileId    String
+  profile      Profile   @relation(fields: [profileId], references: [id])
+  taskId       String
+  task         Task      @relation(fields: [taskId], references: [id])
+  status       String    @default("queued") // 'queued', 'running', 'completed', 'failed', 'captcha_pending', 'error'
+  priority     Int       @default(1)
+  inputData    Json?
+  outputData   Json?
+  logPath      String?
+  videoPath    String?
+  snapshotPath String?
+  startedAt    DateTime?
+  completedAt  DateTime?
+  captchaRequests CaptchaRequest[]
+}
+
+model Task {
+  id          String    @id @default(cuid())
+  name        String    @unique
+  description String?
+  filePath    String
+  jobs        Job[]
+  scheduledJobs ScheduledJob[]
+}
+
+model Proxy {
+  id              String    @id @default(cuid())
+  host            String
+  port            Int
+  username        String?
+  password        String?
+  protocol        String
+  country         String?
+  tag             String?
+  status          String    @default("healthy") // 'healthy', 'unhealthy'
+  lastCheckResult String?
+  lastChecked     DateTime?
+  profiles        Profile[]
+}
+
+model ScheduledJob {
+  id        String   @id @default(cuid())
+  name      String
+  cronString String
+  profileId String
+  profile   Profile  @relation(fields: [profileId], references: [id])
+  taskId    String
+  task      Task     @relation(fields: [taskId], references: [id])
+  priority  Int      @default(1)
+  inputData Json?
+}
+
+model Secret {
+  id            String @id @default(cuid())
+  key           String @unique
+  encryptedValue String
+  description   String?
+}
+
+model Setting {
+  id    String @id @default(cuid())
+  key   String @unique
+  value Json
+}
+
+model CaptchaRequest {
+  id           String    @id @default(cuid())
+  jobId        String
+  job          Job       @relation(fields: [jobId], references: [id])
+  siteUrl      String
+  siteKey      String
+  status       String    @default("pending") // 'pending', 'solved', 'failed'
+  solutionToken String?
+  createdAt    DateTime  @default(now())
+  solvedAt     DateTime?
+}
